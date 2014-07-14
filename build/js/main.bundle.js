@@ -60,7 +60,8 @@
 	var mainController  = __webpack_require__(8);
 	var postsController = __webpack_require__(9);
 	var postViewCtrl = __webpack_require__(10);
-	var postService     = __webpack_require__(11);
+	var AuthCtrl = __webpack_require__(11);
+	var postService     = __webpack_require__(12);
 	
 	var app = angular.module('angNewsApp', [
 	    'ngRoute',
@@ -84,6 +85,14 @@
 	      templateUrl: 'views/showpost.html',
 	      controller: 'postViewCtrl'
 	    })
+	    .when('/register', {
+	      templateUrl: 'views/register.html',
+	      controller: 'AuthCtrl'
+	    })
+	    .when('/login', {
+	      templateUrl: 'views/login.html',
+	      controller: 'AuthCtrl'
+	    })
 	    // .when('/about', {
 	    //   templateUrl: 'views/about.html',
 	    //   controller: 'AboutCtrl'
@@ -97,10 +106,64 @@
 	
 	
 	app.controller( 'mainController', ['$scope', mainController]);
-	app.controller( 'postsController', ['$scope', 'Post', postsController]);
+	app.controller( 'postsController', ['$scope', '$location', 'Post', postsController]);
 	app.controller( 'postViewCtrl', ['$scope', '$routeParams', 'Post', postViewCtrl]);
+	app.controller( 'AuthCtrl', [ '$scope', '$location', 'Auth', AuthCtrl ]);
 	
 	app.factory('Post', ['$resource', '$firebase', 'FIREBASE_URL', postService] );
+	
+	app.factory('Auth', function ($firebaseSimpleLogin, FIREBASE_URL, $rootScope) {
+	  var ref = new Firebase(FIREBASE_URL);
+	  var auth = $firebaseSimpleLogin(ref);
+	
+	  var Auth = {
+	    register: function (user) {
+	      return auth.$createUser( user.email, user.password );
+	    },
+	    signedIn: function () {
+	      return auth.user !== null;
+	    },
+	    login: function (user) {
+	      return auth.$login('password', user);
+	    },
+	    logout: function () {
+	      auth.$logout();
+	    }
+	  };
+	
+	  $rootScope.signedIn = function () {
+	    return Auth.signedIn();
+	  };
+	
+	  return Auth;
+	
+	});
+	
+	
+	app.controller('NavCtrl', function ($scope, $location, Auth, Post) {
+	  $scope.post = {url: 'http://', title: ''};
+	
+	  $scope.submitPost = function () {
+	    Post.create($scope.post).then(function (ref) {
+	      $location.path('/posts/' + ref.name());
+	      $scope.post = {url: 'http://', title: ''};
+	    });
+	  };
+	
+	  $scope.logout = function () {
+	    Auth.logout();
+	  };
+	
+	});
+	
+	
+	app.filter('hostnameFromUrl', function () {
+	  return function (str) {
+	    var url = document.createElement('a');
+	    url.href = str;
+	    return url.hostname;
+	  };
+	});
 
 
 /***/ },
@@ -24716,7 +24779,7 @@
 
 	'use strict';
 	
-	module.exports = function($scope, Post) {
+	module.exports = function($scope, $location, Post) {
 	
 	  $scope.posts = Post.all;
 	
@@ -24724,12 +24787,6 @@
 	    $scope.post = {url: 'http://', title: ''};
 	  };
 	  $scope.resetForm();
-	
-	  $scope.submitPost = function () {
-	    Post.create($scope.post).then(function () {
-	      $scope.resetForm();
-	    });
-	  };
 	
 	  $scope.deletePost = function (postId) {
 	    Post.delete(postId);
@@ -24751,6 +24808,42 @@
 
 /***/ },
 /* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	module.exports = function($scope, $location, Auth) {
+	
+	  if ( Auth.signedIn() ) {
+	    $location.path('/');
+	  }
+	
+	  $scope.$on('$firebaseSimpleLogin:login', function () {
+	    $location.path('/posts');
+	  });
+	
+	  $scope.login = function () {
+	    Auth.login($scope.user).then(function () {
+	      $location.path('/posts');
+	    }, function (error) {
+	      $scope.error = error.toString();
+	    });
+	  };
+	
+	  $scope.register = function () {
+	    Auth.register($scope.user).then(function (authUser) {
+	      console.log(authUser);
+	      $location.path('/posts');
+	    }, function (error) {
+	      $scope.error = error.toString();
+	    });
+	  };
+	
+	};
+
+
+/***/ },
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
