@@ -1,0 +1,11 @@
+{
+  "author": "Luis Martins",
+  "name": "tuts",
+  "version": "0.1.0",
+  "dependencies": {
+    "jquery": "~2.1.0",
+    "jquery-easing": "*",
+    "angularfire": "~0.7.1",
+    "firebase": "~1.0.17"
+  }
+}
